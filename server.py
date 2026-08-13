@@ -185,8 +185,9 @@ docmost = DocmostClient()
 mcp = FastMCP(
     "Docmost Community Bridge",
     instructions=(
-        "Read, search, create and update pages in the self-hosted Docmost "
-        "Community workspace. Use list_spaces before page operations."
+        "List and create spaces, and read, search, create and update pages in "
+        "the self-hosted Docmost Community workspace. Use list_spaces before "
+        "page operations."
     ),
     stateless_http=True,
     json_response=True,
