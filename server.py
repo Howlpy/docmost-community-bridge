@@ -2,9 +2,11 @@ import asyncio
 import hmac
 import os
 from typing import Any, Literal
+from urllib.parse import urlparse
 
 import httpx
 from mcp.server.fastmcp import FastMCP
+from mcp.server.transport_security import TransportSecuritySettings
 from starlette.requests import Request
 from starlette.responses import JSONResponse
 
@@ -13,6 +15,23 @@ DOCMOST_URL = os.environ.get("DOCMOST_URL", "http://docmost:3000").rstrip("/")
 DOCMOST_EMAIL = os.environ["DOCMOST_EMAIL"]
 DOCMOST_PASSWORD = os.environ["DOCMOST_PASSWORD"]
 BRIDGE_TOKEN = os.environ["BRIDGE_TOKEN"]
+BRIDGE_PUBLIC_URL = os.environ.get("BRIDGE_PUBLIC_URL", "").rstrip("/")
+
+
+def transport_security() -> TransportSecuritySettings:
+    allowed_hosts = ["127.0.0.1:*", "localhost:*", "docmost-bridge:*", "bridge:*"]
+    allowed_origins = ["http://127.0.0.1:*", "http://localhost:*"]
+    if BRIDGE_PUBLIC_URL:
+        parsed = urlparse(BRIDGE_PUBLIC_URL)
+        if not parsed.hostname or parsed.scheme not in {"http", "https"}:
+            raise ValueError("BRIDGE_PUBLIC_URL must be an absolute HTTP(S) URL")
+        allowed_hosts.extend([parsed.hostname, parsed.netloc])
+        allowed_origins.append(BRIDGE_PUBLIC_URL)
+    return TransportSecuritySettings(
+        enable_dns_rebinding_protection=True,
+        allowed_hosts=list(dict.fromkeys(allowed_hosts)),
+        allowed_origins=list(dict.fromkeys(allowed_origins)),
+    )
 
 
 class DocmostClient:
@@ -141,6 +160,7 @@ mcp = FastMCP(
     stateless_http=True,
     json_response=True,
     streamable_http_path="/mcp",
+    transport_security=transport_security(),
 )
 
 

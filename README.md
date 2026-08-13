@@ -35,6 +35,7 @@ The bridge intentionally does not expose permanent deletion operations.
 | `DOCMOST_EMAIL` | Email of the Docmost automation account. |
 | `DOCMOST_PASSWORD` | Password of the Docmost automation account. |
 | `BRIDGE_TOKEN` | Long random Bearer token required by REST and MCP clients. |
+| `BRIDGE_PUBLIC_URL` | Public HTTPS URL used to allow the reverse-proxy host, such as `https://docs.example.com`. |
 
 Never commit these values. Store them in a local `.env` file or a secrets
 manager.
@@ -51,6 +52,7 @@ services:
       DOCMOST_EMAIL: ${DOCMOST_EMAIL}
       DOCMOST_PASSWORD: ${DOCMOST_PASSWORD}
       BRIDGE_TOKEN: ${BRIDGE_TOKEN}
+      BRIDGE_PUBLIC_URL: https://docs.example.com
     ports:
       - "127.0.0.1:8000:8000"
 ```
