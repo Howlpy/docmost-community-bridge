@@ -95,8 +95,15 @@ class DocmostClient:
     async def list_spaces(self, limit: int = 100) -> Any:
         return await self.post("spaces/", {"limit": min(max(limit, 1), 100)})
 
+    async def list_groups(self, limit: int = 100) -> Any:
+        return await self.post("groups/", {"limit": min(max(limit, 1), 100)})
+
     async def create_space(
-        self, name: str, description: str | None = None, slug: str | None = None
+        self,
+        name: str,
+        description: str | None = None,
+        slug: str | None = None,
+        visible_to_everyone: bool = True,
     ) -> Any:
         if not isinstance(name, str):
             raise ValueError("Space name is required")
@@ -104,6 +111,8 @@ class DocmostClient:
             raise ValueError("Space description must be a string")
         if slug is not None and not isinstance(slug, str):
             raise ValueError("Space slug must be a string")
+        if not isinstance(visible_to_everyone, bool):
+            raise ValueError("visible_to_everyone must be a boolean")
         clean_name = name.strip()
         if not 2 <= len(clean_name) <= 100 or any(
             character in clean_name for character in "\0\r\n"
@@ -115,7 +124,30 @@ class DocmostClient:
         payload: dict[str, Any] = {"name": clean_name, "slug": clean_slug}
         if description:
             payload["description"] = description.strip()
-        return await self.post("spaces/create", payload)
+        created = await self.post("spaces/create", payload)
+        if not visible_to_everyone:
+            return created
+        try:
+            groups = await self.list_groups()
+            items = groups.get("items", []) if isinstance(groups, dict) else []
+            everyone = next(
+                (group for group in items if group.get("isDefault") is True), None
+            )
+            if not everyone:
+                raise RuntimeError("Docmost default Everyone group was not found")
+            await self.post(
+                "spaces/members/add",
+                {
+                    "spaceId": created["id"],
+                    "role": "writer",
+                    "userIds": [],
+                    "groupIds": [everyone["id"]],
+                },
+            )
+            return created
+        except Exception:
+            await self.post("spaces/delete", {"spaceId": created["id"]})
+            raise
 
     async def list_pages(
         self, space_id: str, parent_page_id: str | None = None, limit: int = 100
@@ -216,10 +248,13 @@ async def list_spaces(limit: int = 100) -> Any:
 
 @mcp.tool()
 async def create_space(
-    name: str, description: str | None = None, slug: str | None = None
+    name: str,
+    description: str | None = None,
+    slug: str | None = None,
+    visible_to_everyone: bool = True,
 ) -> Any:
-    """Create a Docmost space. Requires workspace permission to manage spaces."""
-    return await docmost.create_space(name, description, slug)
+    """Create a space, visible to the workspace Everyone group by default."""
+    return await docmost.create_space(name, description, slug, visible_to_everyone)
 
 
 @mcp.tool()
@@ -299,7 +334,12 @@ async def spaces_route(request: Request) -> JSONResponse:
     if not isinstance(body, dict) or not isinstance(body.get("name"), str):
         return JSONResponse({"ok": False, "error": "name is required"}, status_code=422)
     return await safe(
-        docmost.create_space(body["name"], body.get("description"), body.get("slug"))
+        docmost.create_space(
+            body["name"],
+            body.get("description"),
+            body.get("slug"),
+            body.get("visible_to_everyone", True),
+        )
     )
 
 
