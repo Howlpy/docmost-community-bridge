@@ -180,6 +180,12 @@ class DocmostClient:
             raise ValueError("Provide title and/or content")
         return await self.post("pages/update", payload)
 
+    async def move_page_to_space(self, page_id: str, space_id: str) -> Any:
+        if not page_id or not space_id:
+            raise ValueError("page_id and space_id are required")
+        await self.post("pages/move-to-space", {"pageId": page_id, "spaceId": space_id})
+        return {"pageId": page_id, "spaceId": space_id}
+
 
 docmost = DocmostClient()
 mcp = FastMCP(
@@ -263,6 +269,12 @@ async def update_page(
     return await docmost.update_page(page_id, title, content, operation)
 
 
+@mcp.tool()
+async def move_page_to_space(page_id: str, space_id: str) -> Any:
+    """Move a page and its accessible descendants to another Docmost space."""
+    return await docmost.move_page_to_space(page_id, space_id)
+
+
 def ok(data: Any) -> JSONResponse:
     return JSONResponse({"ok": True, "data": data})
 
@@ -331,6 +343,16 @@ async def page_route(request: Request) -> JSONResponse:
             body.get("content"),
             body.get("operation", "append"),
         )
+    )
+
+
+@mcp.custom_route("/bridge/v1/pages/{page_id}/move", methods=["POST"])
+async def move_page_route(request: Request) -> JSONResponse:
+    body = await request.json()
+    if not isinstance(body, dict) or not isinstance(body.get("space_id"), str):
+        return JSONResponse({"ok": False, "error": "space_id is required"}, status_code=422)
+    return await safe(
+        docmost.move_page_to_space(request.path_params["page_id"], body["space_id"])
     )
 
 
