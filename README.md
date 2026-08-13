@@ -65,6 +65,7 @@ port bound to localhost and expose it through a TLS reverse proxy.
 - `POST /mcp` - MCP Streamable HTTP endpoint.
 - `GET /bridge/v1/spaces` - list accessible spaces.
 - `POST /bridge/v1/spaces` - create a space from `name` and optional `description`, `slug`, or `visible_to_everyone` (defaults to `true`).
+- `DELETE /bridge/v1/spaces/{space_id}` - permanently delete a space and its contents.
 - `GET|POST /bridge/v1/pages` - list or create pages.
 - `GET|PATCH /bridge/v1/pages/{page_id}` - read or update a page.
 - `POST /bridge/v1/pages/{page_id}/move` - move a page to another space.

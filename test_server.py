@@ -63,6 +63,24 @@ class CreateSpaceTests(unittest.IsolatedAsyncioTestCase):
 
         self.client.post.assert_awaited_once()
 
+    async def test_delete_space_uses_validated_immutable_id(self) -> None:
+        self.client.post = AsyncMock(return_value={"deleted": True})
+        space_id = "019ffb2a-1234-7abc-8def-1234567890ab"
+
+        await self.client.delete_space(space_id)
+
+        self.client.post.assert_awaited_once_with(
+            "spaces/delete", {"spaceId": space_id}
+        )
+
+    async def test_delete_space_rejects_unvalidated_ids(self) -> None:
+        self.client.post = AsyncMock()
+
+        with self.assertRaisesRegex(ValueError, "valid space_id"):
+            await self.client.delete_space("General")
+
+        self.client.post.assert_not_awaited()
+
 
 if __name__ == "__main__":
     unittest.main()

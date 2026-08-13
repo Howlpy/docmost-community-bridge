@@ -149,6 +149,14 @@ class DocmostClient:
             await self.post("spaces/delete", {"spaceId": created["id"]})
             raise
 
+    async def delete_space(self, space_id: str) -> Any:
+        if not isinstance(space_id, str) or not re.fullmatch(
+            r"[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}",
+            space_id.strip(),
+        ):
+            raise ValueError("A valid space_id is required")
+        return await self.post("spaces/delete", {"spaceId": space_id.strip()})
+
     async def list_pages(
         self, space_id: str, parent_page_id: str | None = None, limit: int = 100
     ) -> Any:
@@ -258,6 +266,12 @@ async def create_space(
 
 
 @mcp.tool()
+async def delete_space(space_id: str) -> Any:
+    """Permanently delete a Docmost space and its contents. This is irreversible."""
+    return await docmost.delete_space(space_id)
+
+
+@mcp.tool()
 async def list_pages(
     space_id: str, parent_page_id: str | None = None, limit: int = 100
 ) -> Any:
@@ -341,6 +355,11 @@ async def spaces_route(request: Request) -> JSONResponse:
             body.get("visible_to_everyone", True),
         )
     )
+
+
+@mcp.custom_route("/bridge/v1/spaces/{space_id}", methods=["DELETE"])
+async def delete_space_route(request: Request) -> JSONResponse:
+    return await safe(docmost.delete_space(request.path_params["space_id"]))
 
 
 @mcp.custom_route("/bridge/v1/pages", methods=["GET", "POST"])
