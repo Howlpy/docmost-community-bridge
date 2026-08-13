@@ -9,7 +9,7 @@ Enterprise API or MCP code.
 
 ## Features
 
-- List accessible spaces and pages.
+- List and create accessible spaces, and list pages.
 - Read page content as Markdown, HTML, or JSON.
 - Search accessible pages.
 - Create pages from Markdown.
@@ -35,6 +35,7 @@ The bridge intentionally does not expose permanent deletion operations.
 | `DOCMOST_EMAIL` | Email of the Docmost automation account. |
 | `DOCMOST_PASSWORD` | Password of the Docmost automation account. |
 | `BRIDGE_TOKEN` | Long random Bearer token required by REST and MCP clients. |
+| `BRIDGE_PUBLIC_URL` | Public HTTPS URL used to allow the reverse-proxy host, such as `https://docs.example.com`. |
 
 Never commit these values. Store them in a local `.env` file or a secrets
 manager.
@@ -51,6 +52,7 @@ services:
       DOCMOST_EMAIL: ${DOCMOST_EMAIL}
       DOCMOST_PASSWORD: ${DOCMOST_PASSWORD}
       BRIDGE_TOKEN: ${BRIDGE_TOKEN}
+      BRIDGE_PUBLIC_URL: https://docs.example.com
     ports:
       - "127.0.0.1:8000:8000"
 ```
@@ -62,6 +64,7 @@ port bound to localhost and expose it through a TLS reverse proxy.
 
 - `POST /mcp` - MCP Streamable HTTP endpoint.
 - `GET /bridge/v1/spaces` - list accessible spaces.
+- `POST /bridge/v1/spaces` - create a space from `name` and optional `description` or `slug`.
 - `GET|POST /bridge/v1/pages` - list or create pages.
 - `GET|PATCH /bridge/v1/pages/{page_id}` - read or update a page.
 - `GET /bridge/v1/search?q=...` - search pages.
@@ -98,6 +101,7 @@ Available MCP tools:
 
 - `docmost_health`
 - `list_spaces`
+- `create_space`
 - `list_pages`
 - `get_page`
 - `search_pages`
