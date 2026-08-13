@@ -1,6 +1,8 @@
 import asyncio
 import hmac
 import os
+import re
+import unicodedata
 from typing import Any, Literal
 from urllib.parse import urlparse
 
@@ -16,6 +18,13 @@ DOCMOST_EMAIL = os.environ["DOCMOST_EMAIL"]
 DOCMOST_PASSWORD = os.environ["DOCMOST_PASSWORD"]
 BRIDGE_TOKEN = os.environ["BRIDGE_TOKEN"]
 BRIDGE_PUBLIC_URL = os.environ.get("BRIDGE_PUBLIC_URL", "").rstrip("/")
+
+
+def space_slug(name: str) -> str:
+    normalized = unicodedata.normalize("NFKD", name).encode("ascii", "ignore").decode()
+    slug = re.sub(r"[^a-zA-Z0-9_-]+", "-", normalized).strip("-_").lower()
+    slug = re.sub(r"[-_]{2,}", "-", slug)[:100].rstrip("-_")
+    return slug if len(slug) >= 2 else "space"
 
 
 def transport_security() -> TransportSecuritySettings:
@@ -85,6 +94,28 @@ class DocmostClient:
 
     async def list_spaces(self, limit: int = 100) -> Any:
         return await self.post("spaces/", {"limit": min(max(limit, 1), 100)})
+
+    async def create_space(
+        self, name: str, description: str | None = None, slug: str | None = None
+    ) -> Any:
+        if not isinstance(name, str):
+            raise ValueError("Space name is required")
+        if description is not None and not isinstance(description, str):
+            raise ValueError("Space description must be a string")
+        if slug is not None and not isinstance(slug, str):
+            raise ValueError("Space slug must be a string")
+        clean_name = name.strip()
+        if not 2 <= len(clean_name) <= 100 or any(
+            character in clean_name for character in "\0\r\n"
+        ):
+            raise ValueError("Space name must contain 2 to 100 characters on one line")
+        clean_slug = (slug or space_slug(clean_name)).strip().lower()
+        if not re.fullmatch(r"[a-zA-Z0-9][a-zA-Z0-9_-]{1,99}", clean_slug):
+            raise ValueError("Space slug is invalid")
+        payload: dict[str, Any] = {"name": clean_name, "slug": clean_slug}
+        if description:
+            payload["description"] = description.strip()
+        return await self.post("spaces/create", payload)
 
     async def list_pages(
         self, space_id: str, parent_page_id: str | None = None, limit: int = 100
@@ -177,6 +208,14 @@ async def list_spaces(limit: int = 100) -> Any:
 
 
 @mcp.tool()
+async def create_space(
+    name: str, description: str | None = None, slug: str | None = None
+) -> Any:
+    """Create a Docmost space. Requires workspace permission to manage spaces."""
+    return await docmost.create_space(name, description, slug)
+
+
+@mcp.tool()
 async def list_pages(
     space_id: str, parent_page_id: str | None = None, limit: int = 100
 ) -> Any:
@@ -239,9 +278,16 @@ async def health_route(_: Request) -> JSONResponse:
     return await safe(docmost.health())
 
 
-@mcp.custom_route("/bridge/v1/spaces", methods=["GET"])
+@mcp.custom_route("/bridge/v1/spaces", methods=["GET", "POST"])
 async def spaces_route(request: Request) -> JSONResponse:
-    return await safe(docmost.list_spaces(int(request.query_params.get("limit", "100"))))
+    if request.method == "GET":
+        return await safe(docmost.list_spaces(int(request.query_params.get("limit", "100"))))
+    body = await request.json()
+    if not isinstance(body, dict) or not isinstance(body.get("name"), str):
+        return JSONResponse({"ok": False, "error": "name is required"}, status_code=422)
+    return await safe(
+        docmost.create_space(body["name"], body.get("description"), body.get("slug"))
+    )
 
 
 @mcp.custom_route("/bridge/v1/pages", methods=["GET", "POST"])

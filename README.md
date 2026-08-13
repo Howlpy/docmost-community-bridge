@@ -9,7 +9,7 @@ Enterprise API or MCP code.
 
 ## Features
 
-- List accessible spaces and pages.
+- List and create accessible spaces, and list pages.
 - Read page content as Markdown, HTML, or JSON.
 - Search accessible pages.
 - Create pages from Markdown.
@@ -64,6 +64,7 @@ port bound to localhost and expose it through a TLS reverse proxy.
 
 - `POST /mcp` - MCP Streamable HTTP endpoint.
 - `GET /bridge/v1/spaces` - list accessible spaces.
+- `POST /bridge/v1/spaces` - create a space from `name` and optional `description` or `slug`.
 - `GET|POST /bridge/v1/pages` - list or create pages.
 - `GET|PATCH /bridge/v1/pages/{page_id}` - read or update a page.
 - `GET /bridge/v1/search?q=...` - search pages.
@@ -100,6 +101,7 @@ Available MCP tools:
 
 - `docmost_health`
 - `list_spaces`
+- `create_space`
 - `list_pages`
 - `get_page`
 - `search_pages`
