@@ -67,6 +67,7 @@ port bound to localhost and expose it through a TLS reverse proxy.
 - `POST /bridge/v1/spaces` - create a space from `name` and optional `description` or `slug`.
 - `GET|POST /bridge/v1/pages` - list or create pages.
 - `GET|PATCH /bridge/v1/pages/{page_id}` - read or update a page.
+- `POST /bridge/v1/pages/{page_id}/move` - move a page to another space.
 - `GET /bridge/v1/search?q=...` - search pages.
 - `GET /health` - public container health check.
 
@@ -107,6 +108,7 @@ Available MCP tools:
 - `search_pages`
 - `create_page`
 - `update_page`
+- `move_page_to_space`
 
 ## Security notes
 
